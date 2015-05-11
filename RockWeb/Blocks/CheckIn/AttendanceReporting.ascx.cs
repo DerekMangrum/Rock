@@ -548,7 +548,7 @@ function(item) {
             gChartAttendance.DataBind();
         }
 
-        private double? _attendencePossibleCount = null;
+        private List<DateTime> _possibleAttendances = null;
 
         /// <summary>
         /// Binds the attendees grid.
@@ -689,22 +689,6 @@ function(item) {
                 }
             }
 
-            // approximate the attendance max occurrence count from the date range so that can calculate attendance %
-            // from http://stackoverflow.com/a/1925560/1755417
-            TimeSpan dateRangeSpan = dateRange.End.Value - dateRange.Start.Value;
-            if ( groupBy == AttendanceGroupBy.Week )
-            {
-                _attendencePossibleCount = dateRangeSpan.TotalDays / 7;
-            }
-            else if ( groupBy == AttendanceGroupBy.Month )
-            {
-                _attendencePossibleCount = dateRangeSpan.TotalDays / 30.436875;
-            }
-            else if ( groupBy == AttendanceGroupBy.Year )
-            {
-                _attendencePossibleCount = dateRangeSpan.TotalDays / 365.2425;
-            }
-
             SortProperty sortProperty = gAttendeesAttendance.SortProperty;
 
             if ( sortProperty != null )
@@ -739,6 +723,9 @@ function(item) {
             {
                 parentField.Visible = includeParents;
             }
+
+            // Calculate all the possible attendance summary dates
+            UpdatePossibleAttendances( dateRange, groupBy );
 
             if ( includeParents )
             {
@@ -775,9 +762,6 @@ function(item) {
                     s.Attendance.AttendanceSummary
                 } );
 
-                // add grid fields for each possible attendance
-                AddAttendenceSummaryGridFields( dateRange, groupBy );
-
                 gAttendeesAttendance.PersonIdField = "ParentId";
                 gAttendeesAttendance.DataKeyNames = new string[] { "ParentId", "PersonId" };
 
@@ -797,11 +781,56 @@ function(item) {
             }
         }
 
-        public void AddAttendenceSummaryGridFields( DateRange dateRange, AttendanceGroupBy attendanceGroupBy )
+        /// <summary>
+        /// Updates the possible attendance summary dates
+        /// </summary>
+        /// <param name="dateRange">The date range.</param>
+        /// <param name="attendanceGroupBy">The attendance group by.</param>
+        public void UpdatePossibleAttendances( DateRange dateRange, AttendanceGroupBy attendanceGroupBy )
         {
-            foreach ( var boolField in gAttendeesAttendance.Columns.OfType<BoolField>() )
+            foreach ( var checkmarkedAttendanceField in gAttendeesAttendance.Columns.OfType<CallbackField>() )
             {
-                gAttendeesAttendance.Columns.Remove( boolField );
+                gAttendeesAttendance.Columns.Remove( checkmarkedAttendanceField );
+            }
+
+            TimeSpan dateRangeSpan = dateRange.End.Value - dateRange.Start.Value;
+
+            _possibleAttendances = new List<DateTime>();
+
+            if ( attendanceGroupBy == AttendanceGroupBy.Week )
+            {
+                var endOfFirstWeek = dateRange.Start.Value.EndOfWeek( RockDateTime.FirstDayOfWeek );
+                var endOfLastWeek = dateRange.End.Value.EndOfWeek( RockDateTime.FirstDayOfWeek );
+                var weekEndDate = endOfFirstWeek;
+                while ( weekEndDate <= endOfLastWeek )
+                {
+                    _possibleAttendances.Add( weekEndDate );
+                    weekEndDate = weekEndDate.AddDays( 7 );
+                }
+
+            }
+            else if ( attendanceGroupBy == AttendanceGroupBy.Month )
+            {
+                var endOfFirstMonth = dateRange.Start.Value.AddDays( -( dateRange.Start.Value.Day - 1 ) ).AddMonths( 1 ).AddDays( -1 );
+                var endOfLastMonth = dateRange.End.Value.AddDays( -( dateRange.End.Value.Day - 1 ) ).AddMonths( 1 ).AddDays( -1 );
+                var monthEndDate = endOfFirstMonth;
+                while ( monthEndDate <= endOfLastMonth )
+                {
+                    _possibleAttendances.Add( monthEndDate );
+                    // figure out the start of the next month, then substract to the get last day of month
+                    monthEndDate = monthEndDate.AddDays( 1 ).AddMonths( 1 ).AddDays( -1 );
+                }
+            }
+            else if ( attendanceGroupBy == AttendanceGroupBy.Year )
+            {
+                var endOfFirstYear = new DateTime( dateRange.Start.Value.Year, 1, 1 ).AddYears( 1 ).AddDays( -1 );
+                var endOfLastYear = new DateTime( dateRange.End.Value.Year, 1, 1 ).AddYears( 1 ).AddDays( -1 );
+                var yearEndDate = endOfFirstYear;
+                while ( yearEndDate <= endOfLastYear )
+                {
+                    _possibleAttendances.Add( yearEndDate );
+                    yearEndDate = yearEndDate.AddYears( 1 );
+                }
             }
         }
 
@@ -863,10 +892,12 @@ function(item) {
                 int attendanceSummaryCount = attendanceSummary.Count();
                 lAttendanceCount.Text = attendanceSummaryCount.ToString();
 
-                if ( _attendencePossibleCount.HasValue && _attendencePossibleCount > 0 )
+                int? attendencePossibleCount = _possibleAttendances != null ? _possibleAttendances.Count() : (int?)null;
+
+                if ( attendencePossibleCount.HasValue && attendencePossibleCount > 0 )
                 {
                     // round up the possible to the next whole number since the person could have already attended and the current week/month/year isn't over year
-                    var attendancePerPossibleCount = attendanceSummaryCount / Math.Ceiling( _attendencePossibleCount.Value );
+                    var attendancePerPossibleCount = attendanceSummaryCount / attendencePossibleCount.Value;
                     if ( attendancePerPossibleCount > 1 )
                     {
                         attendancePerPossibleCount = 1;
@@ -874,7 +905,6 @@ function(item) {
 
                     lAttendancePercent.Text = string.Format( "{0:P}", attendancePerPossibleCount );
                 }
-
             }
         }
 
