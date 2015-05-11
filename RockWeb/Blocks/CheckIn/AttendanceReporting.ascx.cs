@@ -775,6 +775,9 @@ function(item) {
                     s.Attendance.AttendanceSummary
                 } );
 
+                // add grid fields for each possible attendance
+                AddAttendenceSummaryGridFields( dateRange, groupBy );
+
                 gAttendeesAttendance.PersonIdField = "ParentId";
                 gAttendeesAttendance.DataKeyNames = new string[] { "ParentId", "PersonId" };
 
@@ -791,6 +794,14 @@ function(item) {
                 gAttendeesAttendance.DataKeyNames = new string[] { "PersonId" };
                 gAttendeesAttendance.DataSource = qryResult.AsNoTracking().ToList();
                 gAttendeesAttendance.DataBind();
+            }
+        }
+
+        public void AddAttendenceSummaryGridFields( DateRange dateRange, AttendanceGroupBy attendanceGroupBy )
+        {
+            foreach ( var boolField in gAttendeesAttendance.Columns.OfType<BoolField>() )
+            {
+                gAttendeesAttendance.Columns.Remove( boolField );
             }
         }
 
