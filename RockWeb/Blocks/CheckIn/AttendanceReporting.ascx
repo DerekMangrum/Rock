@@ -8,9 +8,18 @@
                 <h1 class="panel-title"><i class="fa fa-check-square-o"></i>Attendance Analysis</h1>
 
                 <div class="panel-labels">
-                    <Rock:HighlightLabel ID="hlblDateRange" runat="server" LabelType="Info" Text="Date Range" />
+                    <a href="#" onclick="$('.js-slidingdaterange-help').slideToggle()">
+                        <i class='fa fa-question-circle'></i>
+                    </a>
                 </div>
             </div>
+
+            <div class="panel-info">
+                <div class="alert alert-info js-slidingdaterange-help margin-v-none" style="display: none">
+                    <asp:Literal ID="lSlidingDateRangeHelp" runat="server" />
+                </div>
+            </div>
+
             <div class="panel-body">
                 <div class="row row-eq-height-md">
                     <div class="col-md-3 filter-options">
@@ -37,8 +46,11 @@
                             </div>
                         </Rock:RockControlWrapper>
 
+                        <Rock:NotificationBox ID="nbCampusesWarning" runat="server" NotificationBoxType="Warning" Text="Please select at least one campus." Visible="false"/>
                         <Rock:CampusesPicker ID="cpCampuses" runat="server" Label="Campuses" />
 
+                        
+                        <Rock:NotificationBox ID="nbGroupsWarning" runat="server" NotificationBoxType="Warning" Text="Please select at least one group." Visible="false"/>
                         <h4>Group</h4>
                         <ul class="rocktree">
 

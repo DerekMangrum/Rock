@@ -225,6 +225,8 @@ namespace RockWeb.Blocks.CheckIn
         /// </summary>
         public void LoadChartAndGrids()
         {
+            lSlidingDateRangeHelp.Text = SlidingDateRangePicker.GetHelpHtml( RockDateTime.Now );
+            
             lcAttendance.ShowTooltip = true;
             if ( this.DetailPageGuid.HasValue )
             {
@@ -321,9 +323,24 @@ function(item) {
 
             dataSourceUrl += "?" + dataSourceParams.Select( s => string.Format( "{0}={1}", s.Key, s.Value ) ).ToList().AsDelimited( "&" );
 
-            lcAttendance.DataSourceUrl = this.ResolveUrl( dataSourceUrl );
+            // if no Campuses or Groups are selected show a warning since no data will show up
+            nbCampusesWarning.Visible = false;
+            nbGroupsWarning.Visible = false;
 
-            hlblDateRange.Text = SlidingDateRangePicker.CalculateDateRangeFromDelimitedValues( drpSlidingDateRange.DelimitedValues ).ToString( "d" );
+            if ( !selectedGroupIds.Any() )
+            {
+                nbGroupsWarning.Visible = true;
+                return;
+            }
+
+            if ( !cpCampuses.SelectedCampusIds.Any() )
+            {
+                nbCampusesWarning.Visible = true;
+                return;
+            }
+
+
+            lcAttendance.DataSourceUrl = this.ResolveUrl( dataSourceUrl );
 
             if ( pnlChartAttendanceGrid.Visible )
             {

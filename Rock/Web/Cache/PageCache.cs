@@ -341,14 +341,16 @@ namespace Rock.Web.Cache
                             // Load Layout Blocks
                             var layoutBlockIds = blockService
                                 .GetByLayout( this.LayoutId )
-                                .Select( b => b.Id );
+                                .Select( b => b.Id )
+                                .ToList();
 
                             // Load Page Blocks
                             var pageBlockIds = blockService
                                 .GetByPage( this.Id )
-                                .Select( b => b.Id );
+                                .Select( b => b.Id )
+                                .ToList();
 
-                            blockIds = layoutBlockIds.Concat( pageBlockIds ).Distinct().ToList();
+                            blockIds = layoutBlockIds.Union( pageBlockIds ).ToList();
                         }
                     }
                 }
@@ -737,10 +739,9 @@ namespace Rock.Web.Cache
                         }
                     }
 
-                    if ( childPages.Any() )
-                    {
-                        properties.Add( "Pages", childPages );
-                    }
+                    // Add the Pages property so that Lava users can check it via the "empty" check or size.
+                    properties.Add( "Pages", childPages );
+                    
                 }
 
                 return properties;
